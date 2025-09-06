@@ -135,6 +135,8 @@ The Well EPC is located at 8 Canal St, Big Flats, NY, with services held at 9:30
 ### Database Overview
 The website will use MySQL as the primary database for storing dynamic content, user interactions, and administrative data. The database will be hosted on GoDaddy's MySQL servers and accessed through phpMyAdmin for management.
 
+**📋 Setup Documentation:** See `Database-Setup-Guide.md` for complete step-by-step instructions on creating and configuring the database on GoDaddy cPanel.
+
 ### Database Schema
 
 #### Core Tables
