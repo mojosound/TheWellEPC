@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-function AdminDataTable({ title, columns, data, onEdit, onDelete, onAdd, addButtonText = "Add New" }) {
+function AdminDataTable({ title, columns, data, onEdit, onDelete, onDuplicate, onAdd, addButtonText = "Add New" }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
@@ -132,6 +132,14 @@ function AdminDataTable({ title, columns, data, onEdit, onDelete, onAdd, addButt
                           className="text-cyan-600 hover:text-cyan-900"
                         >
                           Edit
+                        </button>
+                      )}
+                      {onDuplicate && (
+                        <button
+                          onClick={() => onDuplicate(item)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          Duplicate
                         </button>
                       )}
                       {onDelete && (

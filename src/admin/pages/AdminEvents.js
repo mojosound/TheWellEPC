@@ -6,8 +6,12 @@ import AdminFormModal from '../components/AdminFormModal';
 
 function AdminEvents() {
   const [events, setEvents] = useState([]);
+  const [filteredEvents, setFilteredEvents] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,6 +24,30 @@ function AdminEvents() {
 
     loadEvents();
   }, [navigate]);
+
+  useEffect(() => {
+    // Filter events based on current filters
+    let filtered = events;
+
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(event => event.category === categoryFilter);
+    }
+
+    if (statusFilter !== 'all') {
+      const isActive = statusFilter === 'active';
+      filtered = filtered.filter(event => event.is_active === isActive);
+    }
+
+    if (searchTerm) {
+      filtered = filtered.filter(event =>
+        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.location.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    setFilteredEvents(filtered);
+  }, [events, categoryFilter, statusFilter, searchTerm]);
 
   const loadEvents = async () => {
     try {
@@ -56,6 +84,54 @@ function AdminEvents() {
           contact_email: 'mary@thewellepc.org',
           is_active: true,
           created_at: '2025-09-03T14:00:00Z'
+        },
+        {
+          id: 3,
+          title: 'Youth Group Meeting',
+          description: 'Weekly youth group meeting with games, worship, and Bible study',
+          event_date: '2025-09-10',
+          start_time: '18:30:00',
+          end_time: '20:30:00',
+          location: 'Youth Room',
+          category: 'ministry',
+          max_attendees: 25,
+          current_attendees: 18,
+          contact_person: 'Sarah Williams',
+          contact_email: 'youth@thewellepc.org',
+          is_active: true,
+          created_at: '2025-09-02T09:00:00Z'
+        },
+        {
+          id: 4,
+          title: 'Community Outreach - Food Drive',
+          description: 'Help us collect non-perishable food items for local families in need',
+          event_date: '2025-09-15',
+          start_time: '10:00:00',
+          end_time: '14:00:00',
+          location: 'Church Parking Lot',
+          category: 'outreach',
+          max_attendees: 50,
+          current_attendees: 12,
+          contact_person: 'John Smith',
+          contact_email: 'outreach@thewellepc.org',
+          is_active: true,
+          created_at: '2025-09-04T11:00:00Z'
+        },
+        {
+          id: 5,
+          title: 'Bible Study - Book of Romans',
+          description: 'In-depth study of the Book of Romans with Pastor Adam',
+          event_date: '2025-09-12',
+          start_time: '19:00:00',
+          end_time: '20:30:00',
+          location: 'Fellowship Hall',
+          category: 'ministry',
+          max_attendees: 30,
+          current_attendees: 22,
+          contact_person: 'Pastor Adam Hungerford',
+          contact_email: 'pastor@thewellepc.org',
+          is_active: true,
+          created_at: '2025-09-01T16:00:00Z'
         }
       ];
       setEvents(mockEvents);
@@ -87,6 +163,18 @@ function AdminEvents() {
     }
   };
 
+  const handleDuplicateEvent = (event) => {
+    const duplicatedEvent = {
+      ...event,
+      id: Date.now(),
+      title: `${event.title} (Copy)`,
+      current_attendees: 0,
+      created_at: new Date().toISOString()
+    };
+    setEvents([...events, duplicatedEvent]);
+    alert('Event duplicated successfully!');
+  };
+
   const handleSaveEvent = async (eventData) => {
     try {
       if (editingEvent) {
@@ -95,15 +183,37 @@ function AdminEvents() {
         alert('Event updated successfully!');
       } else {
         // Add new event
-        const newEvent = { ...eventData, id: Date.now() };
+        const newEvent = {
+          ...eventData,
+          id: Date.now(),
+          current_attendees: 0,
+          created_at: new Date().toISOString()
+        };
         setEvents([...events, newEvent]);
-        alert('Event created successfully!');
+        alert('Event added successfully!');
       }
+      setIsModalOpen(false);
+      setEditingEvent(null);
     } catch (error) {
       console.error('Error saving event:', error);
       alert('Error saving event. Please try again.');
     }
   };
+
+  const getEventStats = () => {
+    const total = events.length;
+    const active = events.filter(e => e.is_active).length;
+    const upcoming = events.filter(e => new Date(e.event_date) > new Date()).length;
+    const thisMonth = events.filter(e => {
+      const eventDate = new Date(e.event_date);
+      const now = new Date();
+      return eventDate.getMonth() === now.getMonth() && eventDate.getFullYear() === now.getFullYear();
+    }).length;
+
+    return { total, active, upcoming, thisMonth };
+  };
+
+  const stats = getEventStats();
 
   const eventFields = [
     { name: 'title', label: 'Event Title', type: 'text', required: true },
@@ -148,12 +258,102 @@ function AdminEvents() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="flex items-center">
+              <div className="text-3xl mr-4 text-blue-600">📅</div>
+              <div>
+                <p className="text-sm text-secondary-500">Total Events</p>
+                <p className="text-2xl font-bold text-secondary-900">{stats.total}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="flex items-center">
+              <div className="text-3xl mr-4 text-green-600">✅</div>
+              <div>
+                <p className="text-sm text-secondary-500">Active Events</p>
+                <p className="text-2xl font-bold text-secondary-900">{stats.active}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="flex items-center">
+              <div className="text-3xl mr-4 text-orange-600">🔮</div>
+              <div>
+                <p className="text-sm text-secondary-500">Upcoming</p>
+                <p className="text-2xl font-bold text-secondary-900">{stats.upcoming}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="flex items-center">
+              <div className="text-3xl mr-4 text-purple-600">📊</div>
+              <div>
+                <p className="text-sm text-secondary-500">This Month</p>
+                <p className="text-2xl font-bold text-secondary-900">{stats.thisMonth}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Filters */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-secondary-700 mb-2">
+                Category
+              </label>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+              >
+                <option value="all">All Categories</option>
+                <option value="worship">Worship</option>
+                <option value="fellowship">Fellowship</option>
+                <option value="outreach">Outreach</option>
+                <option value="ministry">Ministry</option>
+                <option value="community">Community</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-secondary-700 mb-2">
+                Status
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-secondary-700 mb-2">
+                Search
+              </label>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search events..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        </div>
+
         <AdminDataTable
           title="Church Events"
           columns={tableColumns}
-          data={events}
+          data={filteredEvents}
           onEdit={handleEditEvent}
           onDelete={handleDeleteEvent}
+          onDuplicate={handleDuplicateEvent}
           onAdd={handleAddEvent}
           addButtonText="Add Event"
         />
