@@ -2,8 +2,8 @@
 
 ## Document Information
 - **Project Name:** The Well EPC Website
-- **Date:** September 1, 2025
-- **Version:** 1.5
+- **Date:** September 6, 2025
+- **Version:** 1.6
 - **Prepared by:** GitHub Copilot
 
 ## Executive Summary
@@ -129,6 +129,236 @@ The Well EPC is located at 8 Canal St, Big Flats, NY, with services held at 9:30
 - Calendar integration (Google Calendar or similar)
 - Social media APIs for automatic updates
 - Payment gateway for online giving
+
+## Database Design and Schema
+
+### Database Overview
+The website will use MySQL as the primary database for storing dynamic content, user interactions, and administrative data. The database will be hosted on GoDaddy's MySQL servers and accessed through phpMyAdmin for management.
+
+### Database Schema
+
+#### Core Tables
+
+**1. users**
+```sql
+CREATE TABLE users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role ENUM('admin', 'staff', 'member', 'visitor') DEFAULT 'visitor',
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    phone VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    last_login TIMESTAMP NULL
+);
+```
+
+**2. events**
+```sql
+CREATE TABLE events (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    event_date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME,
+    location VARCHAR(200),
+    category ENUM('worship', 'fellowship', 'outreach', 'ministry', 'community', 'other') DEFAULT 'other',
+    max_attendees INT,
+    current_attendees INT DEFAULT 0,
+    contact_person VARCHAR(100),
+    contact_email VARCHAR(100),
+    contact_phone VARCHAR(20),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);
+```
+
+**3. ministries**
+```sql
+CREATE TABLE ministries (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    leader_name VARCHAR(100),
+    leader_email VARCHAR(100),
+    leader_phone VARCHAR(20),
+    meeting_schedule VARCHAR(200),
+    meeting_location VARCHAR(200),
+    volunteer_needs TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+**4. sermons**
+```sql
+CREATE TABLE sermons (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(200) NOT NULL,
+    speaker VARCHAR(100) NOT NULL,
+    sermon_date DATE NOT NULL,
+    scripture_reference VARCHAR(100),
+    description TEXT,
+    audio_url VARCHAR(500),
+    video_url VARCHAR(500),
+    transcript TEXT,
+    series_name VARCHAR(100),
+    tags VARCHAR(500),
+    is_featured BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+**5. announcements**
+```sql
+CREATE TABLE announcements (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    announcement_type ENUM('general', 'urgent', 'event', 'ministry') DEFAULT 'general',
+    start_date DATE NOT NULL,
+    end_date DATE,
+    is_active BOOLEAN DEFAULT TRUE,
+    priority ENUM('low', 'medium', 'high') DEFAULT 'medium',
+    created_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);
+```
+
+#### Relationship and Junction Tables
+
+**6. event_registrations**
+```sql
+CREATE TABLE event_registrations (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    event_id INT NOT NULL,
+    user_id INT,
+    guest_name VARCHAR(100),
+    guest_email VARCHAR(100),
+    guest_phone VARCHAR(20),
+    number_of_guests INT DEFAULT 1,
+    registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    attendance_confirmed BOOLEAN DEFAULT FALSE,
+    notes TEXT,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+```
+
+**7. ministry_volunteers**
+```sql
+CREATE TABLE ministry_volunteers (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    ministry_id INT NOT NULL,
+    user_id INT,
+    volunteer_name VARCHAR(100),
+    volunteer_email VARCHAR(100),
+    volunteer_phone VARCHAR(20),
+    role VARCHAR(100),
+    joined_date DATE,
+    is_active BOOLEAN DEFAULT TRUE,
+    notes TEXT,
+    FOREIGN KEY (ministry_id) REFERENCES ministries(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+```
+
+**8. prayer_requests**
+```sql
+CREATE TABLE prayer_requests (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    requester_name VARCHAR(100),
+    requester_email VARCHAR(100),
+    request_type ENUM('personal', 'family', 'community', 'other') DEFAULT 'personal',
+    request_text TEXT NOT NULL,
+    is_public BOOLEAN DEFAULT FALSE,
+    is_urgent BOOLEAN DEFAULT FALSE,
+    status ENUM('active', 'answered', 'closed') DEFAULT 'active',
+    submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+**9. newsletter_subscriptions**
+```sql
+CREATE TABLE newsletter_subscriptions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    first_name VARCHAR(50),
+    last_name VARCHAR(50),
+    subscription_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    unsubscribed_at TIMESTAMP NULL,
+    preferences JSON
+);
+```
+
+**10. contact_messages**
+```sql
+CREATE TABLE contact_messages (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    phone VARCHAR(20),
+    subject VARCHAR(200) NOT NULL,
+    message TEXT NOT NULL,
+    message_type ENUM('general', 'prayer', 'volunteer', 'event', 'other') DEFAULT 'general',
+    is_read BOOLEAN DEFAULT FALSE,
+    responded_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Database Relationships
+- **users** ↔ **events**: Users can create and register for events
+- **users** ↔ **announcements**: Users can create announcements
+- **events** ↔ **event_registrations**: Events have multiple registrations
+- **ministries** ↔ **ministry_volunteers**: Ministries have multiple volunteers
+- **users** ↔ **ministry_volunteers**: Users can volunteer for ministries
+
+### Indexes and Performance
+```sql
+-- Performance indexes
+CREATE INDEX idx_events_date ON events(event_date);
+CREATE INDEX idx_events_category ON events(category);
+CREATE INDEX idx_sermons_date ON sermons(sermon_date);
+CREATE INDEX idx_sermons_speaker ON sermons(speaker);
+CREATE INDEX idx_announcements_dates ON announcements(start_date, end_date);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_newsletter_email ON newsletter_subscriptions(email);
+```
+
+### Data Validation Rules
+- Email addresses must be valid format
+- Event dates cannot be in the past (for new events)
+- Phone numbers should follow standard formats
+- Required fields cannot be null
+- Foreign key constraints maintain data integrity
+
+### Backup and Maintenance
+- Daily automated backups through GoDaddy
+- Weekly manual verification of backup integrity
+- Monthly cleanup of old log entries and inactive records
+- Regular optimization of database tables
+
+### Security Considerations
+- All database connections use SSL encryption
+- Prepared statements to prevent SQL injection
+- Role-based access control for data operations
+- Regular security updates for MySQL server
+- Encrypted storage for sensitive user data
 
 ## User Stories
 
