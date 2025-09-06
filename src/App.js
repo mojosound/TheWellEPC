@@ -7,6 +7,12 @@ import About from './About';
 import AdminLogin from './admin/pages/AdminLogin';
 import AdminDashboard from './admin/pages/AdminDashboard';
 import AdminEvents from './admin/pages/AdminEvents';
+import AdminSermons from './admin/pages/AdminSermons';
+import AdminAnnouncements from './admin/pages/AdminAnnouncements';
+import AdminMinistries from './admin/pages/AdminMinistries';
+import AdminPrayerRequests from './admin/pages/AdminPrayerRequests';
+import AdminContactMessages from './admin/pages/AdminContactMessages';
+import AdminNewsletter from './admin/pages/AdminNewsletter';
 
 function App() {
   return (
@@ -26,14 +32,12 @@ function App() {
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/events" element={<AdminEvents />} />
-        {/* Placeholder admin routes */}
-        <Route path="/admin/sermons" element={<AdminDashboard />} />
-        <Route path="/admin/announcements" element={<AdminDashboard />} />
-        <Route path="/admin/ministries" element={<AdminDashboard />} />
-        <Route path="/admin/prayer-requests" element={<AdminDashboard />} />
-        <Route path="/admin/contact-messages" element={<AdminDashboard />} />
-        <Route path="/admin/newsletter" element={<AdminDashboard />} />
-        <Route path="/admin/users" element={<AdminDashboard />} />
+        <Route path="/admin/sermons" element={<AdminSermons />} />
+        <Route path="/admin/announcements" element={<AdminAnnouncements />} />
+        <Route path="/admin/ministries" element={<AdminMinistries />} />
+        <Route path="/admin/prayer-requests" element={<AdminPrayerRequests />} />
+        <Route path="/admin/contact-messages" element={<AdminContactMessages />} />
+        <Route path="/admin/newsletter" element={<AdminNewsletter />} />
       </Routes>
     </Router>
   );
