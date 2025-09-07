@@ -7,17 +7,9 @@ $conn = getDBConnection();
 switch ($method) {
     case 'GET':
         // Get all newsletter subscriptions (admin only)
-        $result = $conn->query("SELECT * FROM newsletter_subscriptions ORDER BY created_at DESC");
-
-        if ($result) {
-            $subscriptions = [];
-            while ($row = $result->fetch_assoc()) {
-                $subscriptions[] = $row;
-            }
-            sendResponse($subscriptions);
-        } else {
-            sendResponse(['error' => 'Failed to fetch newsletter subscriptions'], 500);
-        }
+        $stmt = $conn->query("SELECT * FROM newsletter_subscriptions ORDER BY created_at DESC");
+        $subscriptions = $stmt->fetchAll();
+        sendResponse($subscriptions);
         break;
 
     case 'POST':
@@ -42,11 +34,10 @@ switch ($method) {
 
         // Check if email already exists
         $stmt = $conn->prepare("SELECT id FROM newsletter_subscriptions WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $stmt->execute([$email]);
+        $result = $stmt->fetch();
 
-        if ($result->num_rows > 0) {
+        if ($result) {
             sendResponse(['error' => 'Email already subscribed'], 409);
         }
 
@@ -57,14 +48,10 @@ switch ($method) {
 
         // Insert subscription
         $stmt = $conn->prepare("INSERT INTO newsletter_subscriptions (email, name, preferences, is_active) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("sssi", $email, $name, $preferences, $is_active);
+        $stmt->execute([$email, $name, $preferences, $is_active]);
 
-        if ($stmt->execute()) {
-            $subscription_id = $conn->insert_id;
-            sendResponse(['success' => true, 'id' => $subscription_id, 'message' => 'Successfully subscribed to newsletter'], 201);
-        } else {
-            sendResponse(['error' => 'Failed to subscribe to newsletter', 'message' => $stmt->error], 500);
-        }
+        $subscription_id = $conn->lastInsertId();
+        sendResponse(['success' => true, 'id' => $subscription_id, 'message' => 'Successfully subscribed to newsletter'], 201);
         break;
 
     case 'PUT':
@@ -82,7 +69,6 @@ switch ($method) {
 
         // Build update query
         $update_fields = [];
-        $types = '';
         $values = [];
 
         $fields_map = [
@@ -94,7 +80,6 @@ switch ($method) {
         foreach ($fields_map as $field => $type) {
             if (isset($data[$field])) {
                 $update_fields[] = "$field = ?";
-                $types .= $type;
                 if ($field === 'preferences') {
                     $values[] = json_encode($data[$field]);
                 } else {
@@ -108,18 +93,11 @@ switch ($method) {
         }
 
         $values[] = $id;
-        $types .= 'i';
-
         $query = "UPDATE newsletter_subscriptions SET " . implode(', ', $update_fields) . " WHERE id = ?";
         $stmt = $conn->prepare($query);
+        $stmt->execute($values);
 
-        $stmt->bind_param($types, ...$values);
-
-        if ($stmt->execute()) {
-            sendResponse(['success' => true, 'message' => 'Subscription updated successfully']);
-        } else {
-            sendResponse(['error' => 'Failed to update subscription', 'message' => $stmt->error], 500);
-        }
+        sendResponse(['success' => true, 'message' => 'Subscription updated successfully']);
         break;
 
     case 'DELETE':
@@ -130,13 +108,9 @@ switch ($method) {
 
         $id = intval($_GET['id']);
         $stmt = $conn->prepare("UPDATE newsletter_subscriptions SET is_active = 0 WHERE id = ?");
-        $stmt->bind_param("i", $id);
+        $stmt->execute([$id]);
 
-        if ($stmt->execute()) {
-            sendResponse(['success' => true, 'message' => 'Successfully unsubscribed from newsletter']);
-        } else {
-            sendResponse(['error' => 'Failed to unsubscribe', 'message' => $stmt->error], 500);
-        }
+        sendResponse(['success' => true, 'message' => 'Successfully unsubscribed from newsletter']);
         break;
 
     default:

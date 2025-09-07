@@ -7,17 +7,9 @@ $conn = getDBConnection();
 switch ($method) {
     case 'GET':
         // Get all contact messages (admin only)
-        $result = $conn->query("SELECT * FROM contact_messages ORDER BY created_at DESC");
-
-        if ($result) {
-            $messages = [];
-            while ($row = $result->fetch_assoc()) {
-                $messages[] = $row;
-            }
-            sendResponse($messages);
-        } else {
-            sendResponse(['error' => 'Failed to fetch contact messages'], 500);
-        }
+        $stmt = $conn->query("SELECT * FROM contact_messages ORDER BY created_at DESC");
+        $messages = $stmt->fetchAll();
+        sendResponse($messages);
         break;
 
     case 'POST':
@@ -47,14 +39,10 @@ switch ($method) {
 
         // Insert contact message
         $stmt = $conn->prepare("INSERT INTO contact_messages (name, email, phone, subject, message, message_type, is_read) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("ssssssi", $name, $email, $phone, $subject, $message, $message_type, $is_read);
+        $stmt->execute([$name, $email, $phone, $subject, $message, $message_type, $is_read]);
 
-        if ($stmt->execute()) {
-            $message_id = $conn->insert_id;
-            sendResponse(['success' => true, 'id' => $message_id, 'message' => 'Message sent successfully'], 201);
-        } else {
-            sendResponse(['error' => 'Failed to send message', 'message' => $stmt->error], 500);
-        }
+        $message_id = $conn->lastInsertId();
+        sendResponse(['success' => true, 'id' => $message_id, 'message' => 'Message sent successfully'], 201);
         break;
 
     case 'PUT':
@@ -72,7 +60,6 @@ switch ($method) {
 
         // Build update query
         $update_fields = [];
-        $types = '';
         $values = [];
 
         $fields_map = [
@@ -84,7 +71,6 @@ switch ($method) {
         foreach ($fields_map as $field => $type) {
             if (isset($data[$field])) {
                 $update_fields[] = "$field = ?";
-                $types .= $type;
                 $values[] = $data[$field];
             }
         }
@@ -94,18 +80,11 @@ switch ($method) {
         }
 
         $values[] = $id;
-        $types .= 'i';
-
         $query = "UPDATE contact_messages SET " . implode(', ', $update_fields) . " WHERE id = ?";
         $stmt = $conn->prepare($query);
+        $stmt->execute($values);
 
-        $stmt->bind_param($types, ...$values);
-
-        if ($stmt->execute()) {
-            sendResponse(['success' => true, 'message' => 'Message updated successfully']);
-        } else {
-            sendResponse(['error' => 'Failed to update message', 'message' => $stmt->error], 500);
-        }
+        sendResponse(['success' => true, 'message' => 'Message updated successfully']);
         break;
 
     case 'DELETE':
@@ -116,13 +95,9 @@ switch ($method) {
 
         $id = intval($_GET['id']);
         $stmt = $conn->prepare("DELETE FROM contact_messages WHERE id = ?");
-        $stmt->bind_param("i", $id);
+        $stmt->execute([$id]);
 
-        if ($stmt->execute()) {
-            sendResponse(['success' => true, 'message' => 'Message deleted successfully']);
-        } else {
-            sendResponse(['error' => 'Failed to delete message', 'message' => $stmt->error], 500);
-        }
+        sendResponse(['success' => true, 'message' => 'Message deleted successfully']);
         break;
 
     default:

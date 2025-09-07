@@ -14,88 +14,22 @@ function Ministries() {
   const loadMinistries = async () => {
     try {
       setLoading(true);
-      // In production, this would fetch from the API
-      // For now, using mock data until API is fully connected
-      const mockMinistries = [
-        {
-          id: 1,
-          name: 'Children\'s Ministry',
-          description: 'Nurturing faith in our youngest members through age-appropriate activities, Bible stories, and fun learning experiences.',
-          leader_name: 'Sarah Johnson',
-          leader_email: 'sarah@thewellepc.org',
-          leader_phone: '(607) 555-0123',
-          meeting_schedule: 'Sundays 9:30 AM during service',
-          meeting_location: 'Children\'s Wing',
-          volunteer_needs: 'Teachers, assistants, craft coordinators',
-          is_active: true
-        },
-        {
-          id: 2,
-          name: 'Youth Ministry',
-          description: 'Connecting teenagers with God and each other through worship, fellowship, service projects, and leadership development.',
-          leader_name: 'Mike Chen',
-          leader_email: 'mike@thewellepc.org',
-          leader_phone: '(607) 555-0124',
-          meeting_schedule: 'Wednesdays 7:00 PM',
-          meeting_location: 'Youth Room',
-          volunteer_needs: 'Youth leaders, mentors, event coordinators',
-          is_active: true
-        },
-        {
-          id: 3,
-          name: 'Adult Bible Study',
-          description: 'Deepening understanding of Scripture through group study, discussion, and application to daily life.',
-          leader_name: 'Dr. Robert Williams',
-          leader_email: 'robert@thewellepc.org',
-          leader_phone: '(607) 555-0125',
-          meeting_schedule: 'Thursdays 10:00 AM',
-          meeting_location: 'Fellowship Hall',
-          volunteer_needs: 'Facilitators, small group leaders',
-          is_active: true
-        },
-        {
-          id: 4,
-          name: 'Worship Ministry',
-          description: 'Leading congregational worship through music, liturgy, and creative expression that honors God and engages participants.',
-          leader_name: 'Jennifer Davis',
-          leader_email: 'jennifer@thewellepc.org',
-          leader_phone: '(607) 555-0126',
-          meeting_schedule: 'Sundays 8:00 AM rehearsal',
-          meeting_location: 'Sanctuary',
-          volunteer_needs: 'Musicians, vocalists, tech support',
-          is_active: true
-        },
-        {
-          id: 5,
-          name: 'Community Outreach',
-          description: 'Serving our neighbors through food drives, community events, and partnerships with local organizations.',
-          leader_name: 'Tom Anderson',
-          leader_email: 'tom@thewellepc.org',
-          leader_phone: '(607) 555-0127',
-          meeting_schedule: 'Second Saturdays 9:00 AM',
-          meeting_location: 'Community Center',
-          volunteer_needs: 'Event coordinators, drivers, food handlers',
-          is_active: true
-        },
-        {
-          id: 6,
-          name: 'Prayer Ministry',
-          description: 'Supporting the congregation through intercessory prayer, prayer groups, and spiritual guidance.',
-          leader_name: 'Mary Thompson',
-          leader_email: 'mary@thewellepc.org',
-          leader_phone: '(607) 555-0128',
-          meeting_schedule: 'First Monday of each month 7:00 PM',
-          meeting_location: 'Prayer Room',
-          volunteer_needs: 'Prayer coordinators, listeners',
-          is_active: true
-        }
-      ];
+      const response = await fetch('/api/ministries.php');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
 
-      setMinistries(mockMinistries);
+      // Filter only active ministries
+      const activeMinistries = data.filter(ministry => ministry.is_active);
+
+      setMinistries(activeMinistries);
       setError(null);
     } catch (err) {
-      setError('Failed to load ministries. Please try again later.');
       console.error('Error loading ministries:', err);
+      setError('Failed to load ministries. Please try again later.');
+      // Fallback to empty array if API fails
+      setMinistries([]);
     } finally {
       setLoading(false);
     }

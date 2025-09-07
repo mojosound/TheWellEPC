@@ -11,28 +11,14 @@ switch ($method) {
             // Get registrations for specific event
             $event_id = intval($_GET['event_id']);
             $stmt = $conn->prepare("SELECT er.*, e.title as event_title FROM event_registrations er JOIN events e ON er.event_id = e.id WHERE er.event_id = ? ORDER BY er.created_at DESC");
-            $stmt->bind_param("i", $event_id);
-            $stmt->execute();
-            $result = $stmt->get_result();
-
-            $registrations = [];
-            while ($row = $result->fetch_assoc()) {
-                $registrations[] = $row;
-            }
+            $stmt->execute([$event_id]);
+            $registrations = $stmt->fetchAll();
             sendResponse($registrations);
         } else {
             // Get all registrations
-            $result = $conn->query("SELECT er.*, e.title as event_title FROM event_registrations er JOIN events e ON er.event_id = e.id ORDER BY er.created_at DESC");
-
-            if ($result) {
-                $registrations = [];
-                while ($row = $result->fetch_assoc()) {
-                    $registrations[] = $row;
-                }
-                sendResponse($registrations);
-            } else {
-                sendResponse(['error' => 'Failed to fetch event registrations'], 500);
-            }
+            $stmt = $conn->query("SELECT er.*, e.title as event_title FROM event_registrations er JOIN events e ON er.event_id = e.id ORDER BY er.created_at DESC");
+            $registrations = $stmt->fetchAll();
+            sendResponse($registrations);
         }
         break;
 
@@ -56,15 +42,13 @@ switch ($method) {
 
         // Check if event exists and has capacity
         $stmt = $conn->prepare("SELECT max_attendees, (SELECT COUNT(*) FROM event_registrations WHERE event_id = ?) as current_registrations FROM events WHERE id = ?");
-        $stmt->bind_param("ii", $event_id, $event_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $stmt->execute([$event_id, $event_id]);
+        $event_data = $stmt->fetch();
 
-        if ($result->num_rows === 0) {
+        if (!$event_data) {
             sendResponse(['error' => 'Event not found'], 404);
         }
 
-        $event_data = $result->fetch_assoc();
         if ($event_data['max_attendees'] && $event_data['current_registrations'] >= $event_data['max_attendees']) {
             sendResponse(['error' => 'Event is at capacity'], 409);
         }
@@ -72,11 +56,10 @@ switch ($method) {
         // Check if user is already registered
         $email = sanitizeInput($data['email']);
         $stmt = $conn->prepare("SELECT id FROM event_registrations WHERE event_id = ? AND email = ?");
-        $stmt->bind_param("is", $event_id, $email);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $stmt->execute([$event_id, $email]);
+        $result = $stmt->fetch();
 
-        if ($result->num_rows > 0) {
+        if ($result) {
             sendResponse(['error' => 'You are already registered for this event'], 409);
         }
 
@@ -89,14 +72,10 @@ switch ($method) {
 
         // Insert registration
         $stmt = $conn->prepare("INSERT INTO event_registrations (event_id, name, email, phone, guests, special_requests, registration_status) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("isssiss", $event_id, $name, $email, $phone, $guests, $special_requests, $registration_status);
+        $stmt->execute([$event_id, $name, $email, $phone, $guests, $special_requests, $registration_status]);
 
-        if ($stmt->execute()) {
-            $registration_id = $conn->insert_id;
-            sendResponse(['success' => true, 'id' => $registration_id, 'message' => 'Successfully registered for event'], 201);
-        } else {
-            sendResponse(['error' => 'Failed to register for event', 'message' => $stmt->error], 500);
-        }
+        $registration_id = $conn->lastInsertId();
+        sendResponse(['success' => true, 'id' => $registration_id, 'message' => 'Successfully registered for event'], 201);
         break;
 
     case 'PUT':
@@ -114,7 +93,6 @@ switch ($method) {
 
         // Build update query
         $update_fields = [];
-        $types = '';
         $values = [];
 
         $fields_map = [
@@ -130,7 +108,6 @@ switch ($method) {
         foreach ($fields_map as $field => $type) {
             if (isset($data[$field])) {
                 $update_fields[] = "$field = ?";
-                $types .= $type;
                 $values[] = $data[$field];
             }
         }
@@ -140,18 +117,11 @@ switch ($method) {
         }
 
         $values[] = $id;
-        $types .= 'i';
-
         $query = "UPDATE event_registrations SET " . implode(', ', $update_fields) . " WHERE id = ?";
         $stmt = $conn->prepare($query);
+        $stmt->execute($values);
 
-        $stmt->bind_param($types, ...$values);
-
-        if ($stmt->execute()) {
-            sendResponse(['success' => true, 'message' => 'Registration updated successfully']);
-        } else {
-            sendResponse(['error' => 'Failed to update registration', 'message' => $stmt->error], 500);
-        }
+        sendResponse(['success' => true, 'message' => 'Registration updated successfully']);
         break;
 
     case 'DELETE':
@@ -162,13 +132,9 @@ switch ($method) {
 
         $id = intval($_GET['id']);
         $stmt = $conn->prepare("DELETE FROM event_registrations WHERE id = ?");
-        $stmt->bind_param("i", $id);
+        $stmt->execute([$id]);
 
-        if ($stmt->execute()) {
-            sendResponse(['success' => true, 'message' => 'Registration cancelled successfully']);
-        } else {
-            sendResponse(['error' => 'Failed to cancel registration', 'message' => $stmt->error], 500);
-        }
+        sendResponse(['success' => true, 'message' => 'Registration cancelled successfully']);
         break;
 
     default:

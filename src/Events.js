@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import MobileMenu from './components/MobileMenu';
 import EventRegistrationModal from './components/EventRegistrationModal';
@@ -19,99 +19,41 @@ function Events() {
 
   useEffect(() => {
     filterEvents();
-  }, [events, selectedCategory, selectedMonth]);
+  }, [filterEvents]);
 
   const loadEvents = async () => {
     try {
       setLoading(true);
-      // In production, this would fetch from the API
-      // For now, using mock data until API is fully connected
-      const mockEvents = [
-        {
-          id: 1,
-          title: 'Sunday Worship Service',
-          description: 'Join us for our weekly worship service featuring inspiring music, meaningful fellowship, and a message from Pastor Adam Hungerford.',
-          event_date: '2025-09-08',
-          start_time: '09:30:00',
-          end_time: '11:00:00',
-          location: 'The Well EPC Sanctuary',
-          category: 'worship',
-          max_attendees: null,
-          is_active: true
-        },
-        {
-          id: 2,
-          title: 'Community Potluck Dinner',
-          description: 'A wonderful opportunity to connect with fellow church members over delicious food and fellowship. Bring your favorite dish to share!',
-          event_date: '2025-09-14',
-          start_time: '17:00:00',
-          end_time: '19:00:00',
-          location: 'Church Fellowship Hall',
-          category: 'fellowship',
-          max_attendees: 80,
-          is_active: true
-        },
-        {
-          id: 3,
-          title: 'Youth Group Meeting',
-          description: 'Fun activities, games, and Bible study for teenagers ages 13-18. Join us for an evening of faith and friendship.',
-          event_date: '2025-09-18',
-          start_time: '18:30:00',
-          end_time: '20:30:00',
-          location: 'Youth Room',
-          category: 'ministry',
-          max_attendees: 25,
-          is_active: true
-        },
-        {
-          id: 4,
-          title: 'Food Drive for Local Shelter',
-          description: 'Help us collect non-perishable food items for our local homeless shelter. Every contribution makes a difference in our community.',
-          event_date: '2025-09-21',
-          start_time: '10:00:00',
-          end_time: '14:00:00',
-          location: 'Church Parking Lot',
-          category: 'outreach',
-          max_attendees: null,
-          is_active: true
-        },
-        {
-          id: 5,
-          title: 'Bible Study: Romans',
-          description: 'Deep dive into the Book of Romans with Pastor Adam. Open to all adults interested in studying God\'s Word together.',
-          event_date: '2025-09-25',
-          start_time: '19:00:00',
-          end_time: '20:30:00',
-          location: 'Library',
-          category: 'ministry',
-          max_attendees: 20,
-          is_active: true
-        },
-        {
-          id: 6,
-          title: 'Fall Festival',
-          description: 'Family-friendly event with games, food, and fun for the whole community. Great opportunity to invite friends and neighbors!',
-          event_date: '2025-10-05',
-          start_time: '16:00:00',
-          end_time: '20:00:00',
-          location: 'Church Grounds',
-          category: 'community',
-          max_attendees: 150,
-          is_active: true
-        }
-      ];
+      const response = await fetch('/api/events.php');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
 
-      setEvents(mockEvents);
+      // Filter only active events and format the data
+      const activeEvents = data
+        .filter(event => event.is_active)
+        .map(event => ({
+          ...event,
+          // Ensure date format is consistent
+          event_date: event.event_date,
+          start_time: event.start_time || '00:00:00',
+          end_time: event.end_time || '00:00:00'
+        }));
+
+      setEvents(activeEvents);
       setError(null);
     } catch (err) {
-      setError('Failed to load events. Please try again later.');
       console.error('Error loading events:', err);
+      setError('Failed to load events. Please try again later.');
+      // Fallback to empty array if API fails
+      setEvents([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const filterEvents = () => {
+  const filterEvents = useCallback(() => {
     let filtered = events;
 
     if (selectedCategory !== 'all') {
@@ -130,7 +72,7 @@ function Events() {
     filtered.sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
 
     setFilteredEvents(filtered);
-  };
+  }, [events, selectedCategory, selectedMonth]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);

@@ -7,17 +7,9 @@ $conn = getDBConnection();
 switch ($method) {
     case 'GET':
         // Get all prayer requests (admin only)
-        $result = $conn->query("SELECT * FROM prayer_requests ORDER BY created_at DESC");
-
-        if ($result) {
-            $prayers = [];
-            while ($row = $result->fetch_assoc()) {
-                $prayers[] = $row;
-            }
-            sendResponse($prayers);
-        } else {
-            sendResponse(['error' => 'Failed to fetch prayer requests'], 500);
-        }
+        $stmt = $conn->query("SELECT * FROM prayer_requests ORDER BY created_at DESC");
+        $prayers = $stmt->fetchAll();
+        sendResponse($prayers);
         break;
 
     case 'POST':
@@ -47,14 +39,10 @@ switch ($method) {
 
         // Insert prayer request
         $stmt = $conn->prepare("INSERT INTO prayer_requests (name, email, phone, request, is_public, is_urgent, category) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("sssssis", $name, $email, $phone, $request, $is_public, $is_urgent, $category);
+        $stmt->execute([$name, $email, $phone, $request, $is_public, $is_urgent, $category]);
 
-        if ($stmt->execute()) {
-            $prayer_id = $conn->insert_id;
-            sendResponse(['success' => true, 'id' => $prayer_id, 'message' => 'Prayer request submitted successfully'], 201);
-        } else {
-            sendResponse(['error' => 'Failed to submit prayer request', 'message' => $stmt->error], 500);
-        }
+        $prayer_id = $conn->lastInsertId();
+        sendResponse(['success' => true, 'id' => $prayer_id, 'message' => 'Prayer request submitted successfully'], 201);
         break;
 
     case 'PUT':
@@ -72,7 +60,6 @@ switch ($method) {
 
         // Build update query
         $update_fields = [];
-        $types = '';
         $values = [];
 
         $fields_map = [
@@ -89,7 +76,6 @@ switch ($method) {
         foreach ($fields_map as $field => $type) {
             if (isset($data[$field])) {
                 $update_fields[] = "$field = ?";
-                $types .= $type;
                 $values[] = $data[$field];
             }
         }
@@ -99,18 +85,11 @@ switch ($method) {
         }
 
         $values[] = $id;
-        $types .= 'i';
-
         $query = "UPDATE prayer_requests SET " . implode(', ', $update_fields) . " WHERE id = ?";
         $stmt = $conn->prepare($query);
+        $stmt->execute($values);
 
-        $stmt->bind_param($types, ...$values);
-
-        if ($stmt->execute()) {
-            sendResponse(['success' => true, 'message' => 'Prayer request updated successfully']);
-        } else {
-            sendResponse(['error' => 'Failed to update prayer request', 'message' => $stmt->error], 500);
-        }
+        sendResponse(['success' => true, 'message' => 'Prayer request updated successfully']);
         break;
 
     case 'DELETE':
@@ -121,13 +100,9 @@ switch ($method) {
 
         $id = intval($_GET['id']);
         $stmt = $conn->prepare("DELETE FROM prayer_requests WHERE id = ?");
-        $stmt->bind_param("i", $id);
+        $stmt->execute([$id]);
 
-        if ($stmt->execute()) {
-            sendResponse(['success' => true, 'message' => 'Prayer request deleted successfully']);
-        } else {
-            sendResponse(['error' => 'Failed to delete prayer request', 'message' => $stmt->error], 500);
-        }
+        sendResponse(['success' => true, 'message' => 'Prayer request deleted successfully']);
         break;
 
     default:
