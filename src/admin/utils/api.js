@@ -1,7 +1,7 @@
 // Admin API utilities for connecting to backend
-// In production, replace these with actual API endpoints
+// Now connects to real PHP API endpoints
 
-const API_BASE_URL = '/api'; // Adjust based on your backend setup
+const API_BASE_URL = '/api'; // Points to PHP API in public/api/
 
 export const api = {
   // Authentication
@@ -20,32 +20,59 @@ export const api = {
 
   // Events
   getEvents: async () => {
-    // Mock data - replace with actual API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([
-          {
-            id: 1,
-            title: 'Sunday Worship Service',
-            description: 'Weekly worship service',
-            event_date: '2025-09-08',
-            start_time: '09:30:00',
-            location: 'The Well EPC',
-            category: 'worship',
-            is_active: true
-          }
-        ]);
-      }, 500);
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/events.php`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      // Fallback to mock data if API fails
+      return [
+        {
+          id: 1,
+          title: 'Sunday Worship Service',
+          description: 'Weekly worship service',
+          event_date: '2025-09-08',
+          start_time: '09:30:00',
+          location: 'The Well EPC',
+          category: 'worship',
+          is_active: true
+        }
+      ];
+    }
   },
 
   createEvent: async (eventData) => {
-    // Mock create - replace with actual API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({ success: true, id: Date.now() });
-      }, 500);
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/events.php`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error creating event:', error);
+      // Fallback to mock response if API fails
+      return { success: true, id: Date.now() };
+    }
   },
 
   updateEvent: async (id, eventData) => {

@@ -2,6 +2,12 @@ import './App.css';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './Home';
 import About from './About';
+import Services from './Services';
+import Ministries from './Ministries';
+import Events from './Events';
+import Community from './Community';
+import Contact from './Contact';
+import PrayerRequests from './PrayerRequests';
 
 // Admin imports
 import AdminLogin from './admin/pages/AdminLogin';
@@ -21,12 +27,12 @@ function App() {
         {/* Public routes */}
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
-        {/* Placeholder routes for future pages */}
-        <Route path="/services" element={<Home />} />
-        <Route path="/ministries" element={<Home />} />
-        <Route path="/events" element={<Home />} />
-        <Route path="/community" element={<Home />} />
-        <Route path="/contact" element={<Home />} />
+        <Route path="/services" element={<Services />} />
+        <Route path="/ministries" element={<Ministries />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="/community" element={<Community />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/prayer-requests" element={<PrayerRequests />} />
 
         {/* Admin routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
